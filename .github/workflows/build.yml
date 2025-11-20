@@ -27,6 +27,47 @@ jobs:
         run: |
           mkdir -p public
           cp -a content/*.md public/ 2>/dev/null || true
+      - name: Generate index.html
+        run: |
+          mkdir -p public
+
+          # index.html のヘッダ部分を書き出し
+          cat > public/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="ja">
+          <head>
+            <meta charset="UTF-8">
+            <title>Index</title>
+          </head>
+          <body>
+            <h1>Contents</h1>
+            <ul>
+          EOF
+
+          # public 配下の .html / .md を全部拾って、一つのリストにする
+          shopt -s nullglob
+
+          files=(public/*.html public/*.md)
+
+          # index.html 自身は除外して、ベース名だけの配列を作る
+          filtered=()
+          for f in "${files[@]}"; do
+            base=$(basename "$f")
+            [ "$base" = "index.html" ] && continue
+            filtered+=("$base")
+          done
+
+          # ファイル名で降順ソート（先頭が YYYY-MM-DD 前提なので「新しい日付」から並ぶ）
+          printf '%s\n' "${filtered[@]}" | sort -r | while read -r base; do
+            echo "  <li><a href=\"$base\">$base</a></li>" >> public/index.html
+          done
+
+          # フッタを書き出し
+          cat >> public/index.html << 'EOF'
+            </ul>
+          </body>
+          </html>
+          EOF
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
